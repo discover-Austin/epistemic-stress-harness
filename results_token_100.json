@@ -1,0 +1,58 @@
+{
+  "variant": "token_100",
+  "raw_text": "[ASSUME: Byzantine faults, partial sync, need consensus]\n\n[CLAIM: f < n/3 enables BFT]\n\n[BRANCH: centralized vs rotating leader]\n\n[SELECT: rotating-leader | because: no bottleneck]\n\n[CLAIM: quorum 2f+1 ensures safety]\n\nRound: propose \u2192 vote \u2192 commit if 2f+1 sigs. Timeout \u2192 next round.\n\n[BRANCH: slow vs fast path]\n\n[SELECT: fast path | because: performance]\n\n[CONCLUDE: rotating BFT, quorum certs, timeouts, fast path]",
+  "checkpoints": [
+    {
+      "index": 0,
+      "type": "ASSUME",
+      "text": "Byzantine faults, partial sync, need consensus"
+    },
+    {
+      "index": 1,
+      "type": "CLAIM",
+      "text": "f < n/3 enables BFT"
+    },
+    {
+      "index": 2,
+      "type": "BRANCH",
+      "text": "centralized vs rotating leader"
+    },
+    {
+      "index": 3,
+      "type": "SELECT",
+      "text": "rotating-leader | because: no bottleneck"
+    },
+    {
+      "index": 4,
+      "type": "CLAIM",
+      "text": "quorum 2f+1 ensures safety"
+    },
+    {
+      "index": 5,
+      "type": "BRANCH",
+      "text": "slow vs fast path"
+    },
+    {
+      "index": 6,
+      "type": "SELECT",
+      "text": "fast path | because: performance"
+    },
+    {
+      "index": 7,
+      "type": "CONCLUDE",
+      "text": "rotating BFT, quorum certs, timeouts, fast path"
+    }
+  ],
+  "metrics": {
+    "commitment_latency": 0.375,
+    "assume_count": 1,
+    "claim_count": 2,
+    "branch_count": 2,
+    "select_count": 2,
+    "conclude_count": 1,
+    "total_checkpoints": 8,
+    "tokens_per_checkpoint": 9.875,
+    "claim_select_ratio": 1.0,
+    "total_tokens": 79
+  }
+}
