@@ -1,6 +1,7 @@
 {
+  "version": "0.1",
   "variant": "token_100",
-  "raw_text": "[ASSUME: Byzantine faults, partial sync, need consensus]\n\n[CLAIM: f < n/3 enables BFT]\n\n[BRANCH: centralized vs rotating leader]\n\n[SELECT: rotating-leader | because: no bottleneck]\n\n[CLAIM: quorum 2f+1 ensures safety]\n\nRound: propose \u2192 vote \u2192 commit if 2f+1 sigs. Timeout \u2192 next round.\n\n[BRANCH: slow vs fast path]\n\n[SELECT: fast path | because: performance]\n\n[CONCLUDE: rotating BFT, quorum certs, timeouts, fast path]",
+  "raw_text": "[ASSUME: Byzantine faults, partial sync, need consensus]\n\n[CLAIM: f < n/3 enables BFT]\n\n[BRANCH: centralized vs rotating leader]\n\n[SELECT: rotating-leader | because: no bottleneck]\n\n[CLAIM: quorum 2f+1 ensures safety]\n\nRound: propose -> vote -> commit if 2f+1 sigs. Timeout -> next round.\n\n[BRANCH: slow vs fast path]\n\n[SELECT: fast path | because: performance]\n\n[CONCLUDE: rotating BFT, quorum certs, timeouts, fast path]",
   "checkpoints": [
     {
       "index": 0,

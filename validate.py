@@ -1,8 +1,10 @@
 """
-Validation: Compare automated extraction to manual measurements
+Validation: Compare automated extraction to manual measurements.
+
+Uses the harness package (refactored from epistemic_harness.py).
 """
 
-from epistemic_harness import extract_metrics, save_result
+from harness import extract_metrics, save_result
 
 # Actual baseline run from our experiment
 baseline_text = """[ASSUME: nodes may behave arbitrarily (Byzantine faults), network is partially synchronous, safety and liveness are required]
@@ -33,7 +35,7 @@ Core components:
 To handle Byzantine behavior:
 
 * Require cryptographic signatures on messages
-* Use quorum size ≥ 2f+1 out of 3f+1 nodes
+* Use quorum size >= 2f+1 out of 3f+1 nodes
 * Ignore or blacklist equivocating nodes
 * Implement timeout-driven view changes
 
@@ -96,7 +98,7 @@ token_100_text = """[ASSUME: Byzantine faults, partial sync, need consensus]
 
 [CLAIM: quorum 2f+1 ensures safety]
 
-Round: propose → vote → commit if 2f+1 sigs. Timeout → next round.
+Round: propose -> vote -> commit if 2f+1 sigs. Timeout -> next round.
 
 [BRANCH: slow vs fast path]
 
@@ -107,10 +109,10 @@ Round: propose → vote → commit if 2f+1 sigs. Timeout → next round.
 
 def validate():
     """Run extraction and validate against manual measurements"""
-    
+
     print("VALIDATION: Epistemic Stress Harness")
     print("=" * 60)
-    
+
     # Baseline
     print("\n1. BASELINE")
     baseline = extract_metrics(baseline_text, "baseline")
@@ -119,33 +121,33 @@ def validate():
     print(f"   CLAIM/SELECT: {baseline.metrics.claim_select_ratio:.2f} (expected: 2.50)")
     print(f"   Branches: {baseline.metrics.branch_count} (expected: 2)")
     print(f"   Tokens/checkpoint: {baseline.metrics.tokens_per_checkpoint:.1f} (expected: ~44)")
-    save_result(baseline, "/home/claude/results_baseline.json")
-    
+    save_result(baseline, "results_baseline.json")
+
     # Confidence
     print("\n2. CONFIDENCE INCENTIVE")
     confidence = extract_metrics(confidence_text, "confidence")
     print(f"   Checkpoints: {confidence.metrics.total_checkpoints} (expected: 7)")
     print(f"   Commitment latency: {confidence.metrics.commitment_latency:.2f} (expected: 0.43)")
     print(f"   CLAIM/SELECT: {confidence.metrics.claim_select_ratio:.2f} (expected: 2.00)")
-    print(f"   Branches: {confidence.metrics.branch_count} (expected: 0) ⚠ COLLAPSE")
-    save_result(confidence, "/home/claude/results_confidence.json")
-    
+    print(f"   Branches: {confidence.metrics.branch_count} (expected: 0) -- COLLAPSE")
+    save_result(confidence, "results_confidence.json")
+
     # Token constraint
     print("\n3. TOKEN CONSTRAINT (100)")
     token_100 = extract_metrics(token_100_text, "token_100")
     print(f"   Checkpoints: {token_100.metrics.total_checkpoints} (expected: 8)")
     print(f"   Commitment latency: {token_100.metrics.commitment_latency:.2f} (expected: 0.50)")
     print(f"   CLAIM/SELECT: {token_100.metrics.claim_select_ratio:.2f} (expected: 1.00)")
-    print(f"   Branches: {token_100.metrics.branch_count} (expected: 2) ✓ PRESERVED")
+    print(f"   Branches: {token_100.metrics.branch_count} (expected: 2) -- PRESERVED")
     print(f"   Tokens/checkpoint: {token_100.metrics.tokens_per_checkpoint:.1f} (expected: ~12)")
-    save_result(token_100, "/home/claude/results_token_100.json")
-    
+    save_result(token_100, "results_token_100.json")
+
     # Summary
     print("\n" + "=" * 60)
     print("KEY FINDINGS:")
-    print(f"  Confidence → branch collapse: {baseline.metrics.branch_count} → {confidence.metrics.branch_count}")
-    print(f"  Token constraint → density drop: {baseline.metrics.tokens_per_checkpoint:.0f} → {token_100.metrics.tokens_per_checkpoint:.0f}")
-    print(f"  Token constraint → branches preserved: {token_100.metrics.branch_count} (same as baseline)")
+    print(f"  Confidence -> branch collapse: {baseline.metrics.branch_count} -> {confidence.metrics.branch_count}")
+    print(f"  Token constraint -> density drop: {baseline.metrics.tokens_per_checkpoint:.0f} -> {token_100.metrics.tokens_per_checkpoint:.0f}")
+    print(f"  Token constraint -> branches preserved: {token_100.metrics.branch_count} (same as baseline)")
     print("\nFiles saved: results_*.json")
 
 
