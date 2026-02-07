@@ -27,10 +27,13 @@ More reasoning...
 ### 2. Extract metrics
 
 ```python
-from epistemic_harness import extract_metrics, save_result
+from epistemic_harness import extract_metrics, explain_metrics, save_result
 
 result = extract_metrics(your_text, variant_name="baseline")
 save_result(result, "output.json")
+explanations = explain_metrics(result.metrics)
+for name, explanation in explanations.items():
+    print(f"{name}: {explanation}")
 ```
 
 ### 3. Compare variants
@@ -45,6 +48,11 @@ python compare.py
 - **Branch Count**: How many alternatives considered? (0 = linearized)
 - **CLAIM/SELECT Ratio**: Justification density (low = decisive jumps)
 - **Tokens/Checkpoint**: Reasoning richness (drops under constraint)
+
+## Explaining a Result
+
+Use `explain_metrics` to turn raw values into plain-language descriptions with the metric's meaning.
+This does not change the metrics; it simply summarizes them for quick inspection.
 
 ## Diagnostic Patterns
 
