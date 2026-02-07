@@ -330,7 +330,8 @@ def explain_metrics(metrics: Metrics) -> Dict[str, str]:
         ),
         "tokens_per_checkpoint": (
             f"Tokens per checkpoint is {metrics.tokens_per_checkpoint:.1f}, a rough density estimate "
-            "based on word count (words × 1.3). Higher values mean more justification per checkpoint."
+            "based on whitespace-separated word count (text.split()) × 1.3. "
+            "Higher values mean more justification per checkpoint."
         ),
         "claim_select_ratio": (
             f"CLAIM/SELECT ratio is {metrics.claim_select_ratio:.2f}, comparing intermediate claims to selections. "
