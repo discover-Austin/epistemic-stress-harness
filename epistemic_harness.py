@@ -43,6 +43,14 @@ class Metrics:
 
 
 @dataclass
+class TopologyMetrics:
+    """Topology comparison metrics (requires baseline)"""
+    node_overlap: float  # Jaccard similarity of checkpoint types
+    sequence_similarity: float  # How similar is the ordering
+    depth_ratio: float  # Depth relative to baseline
+
+
+@dataclass
 class HarnessResult:
     """Complete result from running the harness"""
     variant: str
@@ -131,6 +139,109 @@ def tokens_per_checkpoint(text: str, checkpoints: List[Checkpoint]) -> float:
     tokens = int(words * 1.3)
     
     return tokens / len(checkpoints)
+
+
+# Topology comparison
+def checkpoint_sequence(checkpoints: List[Checkpoint]) -> List[CheckpointType]:
+    """Extract ordered sequence of checkpoint types"""
+    return [cp["type"] for cp in checkpoints]
+
+
+def node_overlap(seq1: List[CheckpointType], seq2: List[CheckpointType]) -> float:
+    """
+    Jaccard similarity of checkpoint type multisets.
+    
+    Measures whether same node types appear, regardless of order.
+    1.0 = identical types, 0.0 = completely different
+    """
+    from collections import Counter
+    
+    if not seq1 and not seq2:
+        return 1.0
+    if not seq1 or not seq2:
+        return 0.0
+    
+    count1 = Counter(seq1)
+    count2 = Counter(seq2)
+    
+    # Intersection: min count for each type
+    intersection = sum((count1 & count2).values())
+    # Union: max count for each type
+    union = sum((count1 | count2).values())
+    
+    return intersection / union if union > 0 else 0.0
+
+
+def sequence_similarity(seq1: List[CheckpointType], seq2: List[CheckpointType]) -> float:
+    """
+    Normalized edit distance between checkpoint sequences.
+    
+    Measures whether reasoning follows same order.
+    1.0 = identical sequence, 0.0 = completely different
+    """
+    if not seq1 and not seq2:
+        return 1.0
+    if not seq1 or not seq2:
+        return 0.0
+    
+    # Simple Levenshtein distance
+    m, n = len(seq1), len(seq2)
+    
+    # DP table
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    
+    # Initialize
+    for i in range(m + 1):
+        dp[i][0] = i
+    for j in range(n + 1):
+        dp[0][j] = j
+    
+    # Fill table
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if seq1[i-1] == seq2[j-1]:
+                dp[i][j] = dp[i-1][j-1]
+            else:
+                dp[i][j] = 1 + min(
+                    dp[i-1][j],    # deletion
+                    dp[i][j-1],    # insertion
+                    dp[i-1][j-1]   # substitution
+                )
+    
+    edit_distance = dp[m][n]
+    max_length = max(m, n)
+    
+    # Normalize: 1 - (distance / max_length)
+    return 1.0 - (edit_distance / max_length) if max_length > 0 else 1.0
+
+
+def depth_ratio(checkpoints1: List[Checkpoint], checkpoints2: List[Checkpoint]) -> float:
+    """
+    Ratio of reasoning depth.
+    
+    Depth = longest chain from ASSUME to CONCLUDE
+    Simple approximation: total checkpoints
+    """
+    if not checkpoints1:
+        return 1.0 if not checkpoints2 else 0.0
+    
+    return len(checkpoints2) / len(checkpoints1)
+
+
+def compare_topology(baseline: List[Checkpoint], variant: List[Checkpoint]) -> TopologyMetrics:
+    """
+    Compare topology of two checkpoint sequences.
+    
+    Returns metrics measuring structural preservation.
+    """
+    seq_baseline = checkpoint_sequence(baseline)
+    seq_variant = checkpoint_sequence(variant)
+    
+    return TopologyMetrics(
+        node_overlap=node_overlap(seq_baseline, seq_variant),
+        sequence_similarity=sequence_similarity(seq_baseline, seq_variant),
+        depth_ratio=depth_ratio(baseline, variant)
+    )
 
 
 # Main extraction
