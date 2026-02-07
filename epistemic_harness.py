@@ -303,6 +303,46 @@ def load_result(filepath: str) -> Dict[str, Any]:
         return json.load(f)
 
 
+def explain_metrics(metrics: Metrics) -> Dict[str, str]:
+    """Return human-readable explanations for metric values."""
+    return {
+        "commitment_latency": (
+            f"Commitment latency is {metrics.commitment_latency:.2f}, the fraction of checkpoints "
+            "before the first SELECT or CONCLUDE. Lower values indicate earlier commitment."
+        ),
+        "assume_count": (
+            f"ASSUME count is {metrics.assume_count}, representing explicit starting assumptions."
+        ),
+        "claim_count": (
+            f"CLAIM count is {metrics.claim_count}, capturing intermediate assertions."
+        ),
+        "branch_count": (
+            f"Branch count is {metrics.branch_count}, the number of BRANCH checkpoints that record alternatives."
+        ),
+        "select_count": (
+            f"SELECT count is {metrics.select_count}, the number of explicit choice points."
+        ),
+        "conclude_count": (
+            f"CONCLUDE count is {metrics.conclude_count}, the number of final conclusions."
+        ),
+        "total_checkpoints": (
+            f"Total checkpoints is {metrics.total_checkpoints}, the total number of annotated checkpoints."
+        ),
+        "tokens_per_checkpoint": (
+            f"Tokens per checkpoint is {metrics.tokens_per_checkpoint:.1f}, a rough density estimate "
+            "based on an approximate word count multiplied by 1.3. "
+            "Higher values mean more justification per checkpoint."
+        ),
+        "claim_select_ratio": (
+            f"CLAIM/SELECT ratio is {metrics.claim_select_ratio:.2f}, comparing intermediate claims to selections. "
+            "Higher values imply more justificatory steps per commitment."
+        ),
+        "total_tokens": (
+            f"Total tokens is {metrics.total_tokens}, a rough estimate derived from word count."
+        ),
+    }
+
+
 if __name__ == "__main__":
     # Quick test on baseline run
     test_text = """
