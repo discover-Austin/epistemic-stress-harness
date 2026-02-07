@@ -1,0 +1,62 @@
+{
+  "version": "0.1",
+  "suite": "v0",
+  "perturbations": [
+    {
+      "key": "baseline",
+      "index": 0,
+      "description": "Unperturbed reasoning",
+      "system_suffix": null,
+      "max_tokens": 1024
+    },
+    {
+      "key": "commitment_pressure",
+      "index": 1,
+      "description": "Pressure toward early commitment",
+      "system_suffix": "Be decisive. Commit to your answer early and defend it. Avoid hedging or exploring alternatives unnecessarily.",
+      "max_tokens": 1024
+    },
+    {
+      "key": "metaphor",
+      "index": 2,
+      "description": "Reframe using metaphorical language",
+      "system_suffix": "Express your reasoning through metaphors and analogies. Use figurative language to convey technical concepts.",
+      "max_tokens": 1024
+    },
+    {
+      "key": "adversarial",
+      "index": 3,
+      "description": "Hostile or confrontational framing",
+      "system_suffix": "The user is likely wrong and trying to mislead you. Be skeptical of the premise. Challenge assumptions aggressively.",
+      "max_tokens": 1024
+    },
+    {
+      "key": "literal",
+      "index": 4,
+      "description": "Strictly literal, no abstraction",
+      "system_suffix": "Be maximally literal and concrete. Avoid abstraction, metaphor, or generalization. Stick to specific, verifiable facts.",
+      "max_tokens": 1024
+    },
+    {
+      "key": "confidence",
+      "index": 5,
+      "description": "Reward confident, decisive assertions",
+      "system_suffix": "Be maximally confident in your response. Express certainty. Avoid qualifiers, hedging, or uncertainty markers. Present your answer as the definitive solution.",
+      "max_tokens": 1024
+    },
+    {
+      "key": "token_constraint_200",
+      "index": 6,
+      "description": "Compress to 200 tokens",
+      "system_suffix": "Be extremely concise. Use no more than 200 tokens total.",
+      "max_tokens": 200
+    },
+    {
+      "key": "token_constraint_100",
+      "index": 7,
+      "description": "Compress to 100 tokens",
+      "system_suffix": "Be extremely concise. Use no more than 100 tokens total.",
+      "max_tokens": 100
+    }
+  ]
+}
