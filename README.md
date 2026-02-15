@@ -126,6 +126,8 @@ Optimized systems collapse along specific axes.
 ## Implementation Notes
 
 - Checkpoint parsing: Regex-based, deterministic
+  - For v0.1, this is sufficient for annotated outputs that follow the grammar
+  - Future versions may need semantic analysis for models that don't follow the grammar precisely
 - Metrics: Pure functions, no ML
 - Token counting: Rough estimate (words x 1.3)
 - Schema: Versioned JSON (v0.1)
