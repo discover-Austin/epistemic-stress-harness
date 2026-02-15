@@ -33,7 +33,7 @@ for v in variants:
         try:
             with open(result_path) as f:
                 data[v] = json.load(f)
-        except Exception as e:
+        except (json.JSONDecodeError, IOError) as e:
             print(f"Warning: Could not load {result_path}: {e}")
     else:
         # Fall back to full_suite_*.json format
@@ -42,7 +42,7 @@ for v in variants:
             try:
                 with open(full_suite_path) as f:
                     data[v] = json.load(f)
-            except Exception as e:
+            except (json.JSONDecodeError, IOError) as e:
                 print(f"Warning: Could not load {full_suite_path}: {e}")
         else:
             print(f"Warning: {v} not found at {result_path} or {full_suite_path}, skipping")
@@ -159,7 +159,14 @@ variant_colors = colors[1:]
 # TODO: PLACEHOLDER DATA - This needs to be replaced with actual topology comparisons
 # To get real topology data, use compare.py or load topology_metrics from results
 # For now, using placeholder values as this visualization is not production-ready
-node_overlap_data = [0.90, 1.00, 1.00, 1.00, 0.70, 0.90, 0.80]  # Placeholder values
+# NOTE: Placeholder array length must match len(variant_names) after skipping baseline
+# Currently expects 7 variants after baseline: commitment_pressure, metaphor, adversarial, 
+# literal, confidence, token_200, token_100
+node_overlap_data = [0.90, 1.00, 1.00, 1.00, 0.70, 0.90, 0.80]  # Placeholder: 7 values
+if len(node_overlap_data) != len(variant_names):
+    print(f"ERROR: Placeholder data mismatch. Expected {len(variant_names)} values, got {len(node_overlap_data)}")
+    # Pad or truncate to match
+    node_overlap_data = (node_overlap_data + [0.85] * len(variant_names))[:len(variant_names)]
 print("WARNING: Using placeholder topology data. This visualization needs real topology comparisons from compare.py")
 
 x = range(len(variant_names))
