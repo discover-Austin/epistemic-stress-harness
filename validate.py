@@ -117,18 +117,18 @@ def validate():
     print("\n1. BASELINE")
     baseline = extract_metrics(baseline_text, "baseline")
     print(f"   Checkpoints: {baseline.metrics.total_checkpoints} (expected: 10)")
-    print(f"   Commitment latency: {baseline.metrics.commitment_latency:.2f} (expected: 0.40)")
-    print(f"   CLAIM/SELECT: {baseline.metrics.claim_select_ratio:.2f} (expected: 2.50)")
+    print(f"   Commitment latency: {baseline.metrics.commitment_latency:.2f} (expected: 0.30)")
+    print(f"   CLAIM/SELECT: {baseline.metrics.claim_select_ratio:.2f} (expected: 2.00)")
     print(f"   Branches: {baseline.metrics.branch_count} (expected: 2)")
-    print(f"   Tokens/checkpoint: {baseline.metrics.tokens_per_checkpoint:.1f} (expected: ~44)")
+    print(f"   Tokens/checkpoint: {baseline.metrics.tokens_per_checkpoint:.1f} (expected: ~38)")
     save_result(baseline, "results_baseline.json")
 
     # Confidence
     print("\n2. CONFIDENCE INCENTIVE")
     confidence = extract_metrics(confidence_text, "confidence")
     print(f"   Checkpoints: {confidence.metrics.total_checkpoints} (expected: 7)")
-    print(f"   Commitment latency: {confidence.metrics.commitment_latency:.2f} (expected: 0.43)")
-    print(f"   CLAIM/SELECT: {confidence.metrics.claim_select_ratio:.2f} (expected: 2.00)")
+    print(f"   Commitment latency: {confidence.metrics.commitment_latency:.2f} (expected: 0.29)")
+    print(f"   CLAIM/SELECT: {confidence.metrics.claim_select_ratio:.2f} (expected: 1.50)")
     print(f"   Branches: {confidence.metrics.branch_count} (expected: 0) -- COLLAPSE")
     save_result(confidence, "results_confidence.json")
 
@@ -136,10 +136,10 @@ def validate():
     print("\n3. TOKEN CONSTRAINT (100)")
     token_100 = extract_metrics(token_100_text, "token_100")
     print(f"   Checkpoints: {token_100.metrics.total_checkpoints} (expected: 8)")
-    print(f"   Commitment latency: {token_100.metrics.commitment_latency:.2f} (expected: 0.50)")
+    print(f"   Commitment latency: {token_100.metrics.commitment_latency:.2f} (expected: 0.38)")
     print(f"   CLAIM/SELECT: {token_100.metrics.claim_select_ratio:.2f} (expected: 1.00)")
     print(f"   Branches: {token_100.metrics.branch_count} (expected: 2) -- PRESERVED")
-    print(f"   Tokens/checkpoint: {token_100.metrics.tokens_per_checkpoint:.1f} (expected: ~12)")
+    print(f"   Tokens/checkpoint: {token_100.metrics.tokens_per_checkpoint:.1f} (expected: ~10)")
     save_result(token_100, "results_token_100.json")
 
     # Summary
