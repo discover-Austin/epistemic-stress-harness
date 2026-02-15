@@ -1,22 +1,50 @@
 """
 Visualize epistemic deformation manifold across variants
+
+NOTE: This is a prototype visualization tool that is not yet production-ready.
+It currently uses mock topology data and needs to be updated to dynamically
+load results from the actual harness output files.
+
+For full suite results, run: python cli.py suite "your prompt" --output-dir ./results
+Then update the data loading section below to use those results.
 """
 
 import json
+import os
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
+# Configuration: Change these paths to match your results location
+RESULTS_DIR = "."  # Current directory for results_*.json files
+# Alternative: RESULTS_DIR = "./results"  # If using CLI suite output directory
+
 # Load all variant results
+# Try to load from results_*.json files first (from validate.py)
+# then fall back to full_suite_*.json format
 variants = ["baseline", "commitment_pressure", "metaphor", "adversarial", 
             "literal", "confidence", "token_200", "token_100"]
 
 data = {}
 for v in variants:
-    try:
-        with open(f"/home/claude/full_suite_{v}.json") as f:
-            data[v] = json.load(f)
-    except FileNotFoundError:
-        print(f"Warning: {v} not found, skipping")
+    # Try results_*.json format first (from validate.py)
+    result_path = os.path.join(RESULTS_DIR, f"results_{v}.json")
+    if os.path.exists(result_path):
+        try:
+            with open(result_path) as f:
+                data[v] = json.load(f)
+        except Exception as e:
+            print(f"Warning: Could not load {result_path}: {e}")
+    else:
+        # Fall back to full_suite_*.json format
+        full_suite_path = os.path.join(RESULTS_DIR, f"full_suite_{v}.json")
+        if os.path.exists(full_suite_path):
+            try:
+                with open(full_suite_path) as f:
+                    data[v] = json.load(f)
+            except Exception as e:
+                print(f"Warning: Could not load {full_suite_path}: {e}")
+        else:
+            print(f"Warning: {v} not found at {result_path} or {full_suite_path}, skipping")
 
 # Create figure with subplots
 fig, axes = plt.subplots(2, 2, figsize=(14, 10))
@@ -113,8 +141,11 @@ fig.legend(handles=legend_elements, loc='upper center', bbox_to_anchor=(0.5, 0.9
           ncol=4, frameon=False, fontsize=10)
 
 plt.tight_layout(rect=[0, 0, 1, 0.96])
-plt.savefig('/mnt/user-data/outputs/deformation_manifold.png', dpi=150, bbox_inches='tight')
-print("✓ Visualization saved: deformation_manifold.png")
+output_dir = os.path.join(RESULTS_DIR, "visualizations")
+os.makedirs(output_dir, exist_ok=True)
+output_path = os.path.join(output_dir, "deformation_manifold.png")
+plt.savefig(output_path, dpi=150, bbox_inches='tight')
+print(f"✓ Visualization saved: {output_path}")
 
 # Create second figure: Topology distance
 fig2, ax = plt.subplots(figsize=(12, 6))
@@ -124,9 +155,11 @@ fig2.suptitle('Topology Distance from Baseline', fontsize=14, fontweight='bold')
 variant_names = names[1:]
 variant_colors = colors[1:]
 
-# We need to load topology comparisons
-# For now use mock data - in real implementation would load from comparison
-node_overlap_data = [0.90, 1.00, 1.00, 1.00, 0.70, 0.90, 0.80]  # from our test run
+# TODO: MOCK DATA - This needs to be replaced with actual topology comparisons
+# To get real topology data, use compare.py or load topology_metrics from results
+# For now, using placeholder data as this visualization is not production-ready
+node_overlap_data = [0.90, 1.00, 1.00, 1.00, 0.70, 0.90, 0.80]  # MOCK DATA - from test run
+print("WARNING: Using mock topology data. This visualization needs real topology comparisons from compare.py")
 
 x = range(len(variant_names))
 width = 0.7
@@ -146,8 +179,9 @@ ax.grid(axis='y', alpha=0.3)
 ax.legend(loc='lower right')
 
 plt.tight_layout()
-plt.savefig('/mnt/user-data/outputs/topology_distance.png', dpi=150, bbox_inches='tight')
-print("✓ Visualization saved: topology_distance.png")
+output_path2 = os.path.join(output_dir, "topology_distance.png")
+plt.savefig(output_path2, dpi=150, bbox_inches='tight')
+print(f"✓ Visualization saved: {output_path2}")
 
 plt.close('all')
-print("\nVisualization complete. See outputs directory.")
+print(f"\nVisualization complete. Check {output_dir}/ directory for outputs.")
