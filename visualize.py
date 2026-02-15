@@ -167,8 +167,8 @@ if "baseline" in data and "checkpoints" in data["baseline"]:
             topology = compare_topology(baseline_checkpoints, variant_checkpoints)
             node_overlap_data.append(topology.node_overlap)
         else:
-            # If variant data not available, use None or skip
-            print(f"Warning: No checkpoint data for {variant_name}, using 0.0 for topology")
+            # If variant data not available, use 0.0 as placeholder
+            print(f"Warning: No checkpoint data for {variant_name}, defaulting to 0.0 (missing data)")
             node_overlap_data.append(0.0)
     
     # Ensure we have data for all variants
@@ -177,7 +177,7 @@ if "baseline" in data and "checkpoints" in data["baseline"]:
         # Pad with 0.0 if needed
         node_overlap_data = (node_overlap_data + [0.0] * len(variant_names))[:len(variant_names)]
 else:
-    print("Warning: Baseline checkpoint data not available, skipping topology visualization")
+    print("Warning: Baseline checkpoint data not available, topology visualization will use fallback values (0.0)")
     node_overlap_data = [0.0] * len(variant_names)
 
 x = range(len(variant_names))
