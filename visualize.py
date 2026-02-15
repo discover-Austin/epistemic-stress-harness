@@ -1,18 +1,17 @@
 """
 Visualize epistemic deformation manifold across variants
 
-NOTE: This is a prototype visualization tool that is not yet production-ready.
-It currently uses mock topology data and needs to be updated to dynamically
-load results from the actual harness output files.
+Generates visualization plots showing how different stressors (confidence pressure,
+resource constraints, reframing) affect epistemic integrity metrics.
 
 For full suite results, run: python cli.py suite "your prompt" --output-dir ./results
-Then update the data loading section below to use those results.
 """
 
 import json
 import os
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+from harness import compare_topology
 
 # Configuration: Change these paths to match your results location
 # Use "." when running validate.py (results_*.json in current directory)
@@ -156,18 +155,30 @@ fig2.suptitle('Topology Distance from Baseline', fontsize=14, fontweight='bold')
 variant_names = names[1:]
 variant_colors = colors[1:]
 
-# TODO: PLACEHOLDER DATA - This needs to be replaced with actual topology comparisons
-# To get real topology data, use compare.py or load topology_metrics from results
-# For now, using placeholder values as this visualization is not production-ready
-# NOTE: Placeholder array length must match len(variant_names) after skipping baseline
-# Currently expects 7 variants after baseline: commitment_pressure, metaphor, adversarial, 
-# literal, confidence, token_200, token_100
-node_overlap_data = [0.90, 1.00, 1.00, 1.00, 0.70, 0.90, 0.80]  # Placeholder: 7 values
-if len(node_overlap_data) != len(variant_names):
-    print(f"ERROR: Placeholder data mismatch. Expected {len(variant_names)} values, got {len(node_overlap_data)}")
-    # Pad or truncate to match
-    node_overlap_data = (node_overlap_data + [0.85] * len(variant_names))[:len(variant_names)]
-print("WARNING: Using placeholder topology data. This visualization needs real topology comparisons from compare.py")
+# Compute real topology comparisons vs baseline
+# If baseline data is not available, skip topology visualization
+if "baseline" in data and "checkpoints" in data["baseline"]:
+    baseline_checkpoints = data["baseline"]["checkpoints"]
+    node_overlap_data = []
+    
+    for variant_name in variant_names:
+        if variant_name in data and "checkpoints" in data[variant_name]:
+            variant_checkpoints = data[variant_name]["checkpoints"]
+            topology = compare_topology(baseline_checkpoints, variant_checkpoints)
+            node_overlap_data.append(topology.node_overlap)
+        else:
+            # If variant data not available, use None or skip
+            print(f"Warning: No checkpoint data for {variant_name}, using 0.0 for topology")
+            node_overlap_data.append(0.0)
+    
+    # Ensure we have data for all variants
+    if len(node_overlap_data) != len(variant_names):
+        print(f"ERROR: Topology data length mismatch. Expected {len(variant_names)}, got {len(node_overlap_data)}")
+        # Pad with 0.0 if needed
+        node_overlap_data = (node_overlap_data + [0.0] * len(variant_names))[:len(variant_names)]
+else:
+    print("Warning: Baseline checkpoint data not available, skipping topology visualization")
+    node_overlap_data = [0.0] * len(variant_names)
 
 x = range(len(variant_names))
 width = 0.7
