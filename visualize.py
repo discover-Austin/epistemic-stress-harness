@@ -15,8 +15,9 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
 # Configuration: Change these paths to match your results location
+# Use "." when running validate.py (results_*.json in current directory)
+# Use "./results" when using CLI suite output (python cli.py suite ... --output-dir ./results)
 RESULTS_DIR = "."  # Current directory for results_*.json files
-# Alternative: RESULTS_DIR = "./results"  # If using CLI suite output directory
 
 # Load all variant results
 # Try to load from results_*.json files first (from validate.py)
@@ -155,11 +156,11 @@ fig2.suptitle('Topology Distance from Baseline', fontsize=14, fontweight='bold')
 variant_names = names[1:]
 variant_colors = colors[1:]
 
-# TODO: MOCK DATA - This needs to be replaced with actual topology comparisons
+# TODO: PLACEHOLDER DATA - This needs to be replaced with actual topology comparisons
 # To get real topology data, use compare.py or load topology_metrics from results
-# For now, using placeholder data as this visualization is not production-ready
-node_overlap_data = [0.90, 1.00, 1.00, 1.00, 0.70, 0.90, 0.80]  # MOCK DATA - from test run
-print("WARNING: Using mock topology data. This visualization needs real topology comparisons from compare.py")
+# For now, using placeholder values as this visualization is not production-ready
+node_overlap_data = [0.90, 1.00, 1.00, 1.00, 0.70, 0.90, 0.80]  # Placeholder values
+print("WARNING: Using placeholder topology data. This visualization needs real topology comparisons from compare.py")
 
 x = range(len(variant_names))
 width = 0.7
