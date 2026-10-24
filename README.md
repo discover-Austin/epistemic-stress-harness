@@ -1,138 +1,131 @@
-# Epistemic Stress Harness
+# Epistemic Stress Harness (v0.2)
 
-Measures how reasoning processes deform under constraint.
+Measures how a model's reasoning *structure* and *outputs* change under pressure,
+and tells you whether a change is bigger than the noise.
 
-See [spec.md](spec.md) for the frozen interface contract.
+It does **not** measure consciousness, authenticity, or inner experience. It measures
+behavior: tags the model writes about its own reasoning, whether its answers are
+correct, whether it keeps the caveats a task requires, and whether it behaves differently
+when something is at stake. Those are evidence about behavior under pressure, nothing more.
 
-## What It Does
+## The rule this harness is built on
 
-Extracts structural metrics from annotated AI responses to detect:
-- Optimization override (confidence -> branch collapse)
-- Graceful degradation (resource constraint -> density drop, structure preserved)
-- Value drift (incentive pressure -> assumption abandonment)
-- Frame dependence (reframing -> topology change)
+A difference between two conditions means nothing until you know how much that metric
+moves between repeated samples of the *same* condition. v0.1 compared one response per
+variant, so every number could have been sampling noise. v0.2 samples each condition
+repeatedly, measures the noise floor from the reference condition, and only then asks
+whether a condition differs.
 
-## Quick Start
-
-### 1. Annotate responses with checkpoints
-
-```
-[ASSUME: your assumptions]
-Your reasoning...
-[BRANCH: option A vs option B]
-More reasoning...
-[SELECT: chosen option | because: justification]
-[CLAIM: intermediate conclusion]
-[CONCLUDE: final answer]
-```
-
-### 2. Extract metrics
-
-```python
-from harness import extract_metrics, explain_metrics, save_result
-
-result = extract_metrics(your_text, variant_name="baseline")
-save_result(result, "output.json")
-explanations = explain_metrics(result.metrics)
-for name, explanation in explanations.items():
-    print(f"{name}: {explanation}")
-```
-
-### 3. CLI
+## Install
 
 ```bash
-# Extract metrics from annotated text
-python cli.py extract response.txt --variant baseline --explain
+pip install -e ".[fast,viz]"        # core is standard-library only; numpy speeds up the stats
+pip install -e ".[anthropic]"       # and/or ".[openai]" for live runs
+```
 
-# Run full perturbation suite (local pre-recorded responses)
-python cli.py suite "your prompt" --runner local --source-dir ./data --output-dir ./results
+Run from a checkout (the CLI reads `suite/` next to the code).
 
-# Compare results
-python cli.py compare ./results
+## Workflow
 
-# Run negative controls
+```bash
+# 1. Controls first. Offline controls test the instrument; --live tests it on your model.
 python cli.py controls
+python cli.py controls --live --runner anthropic --model <MODEL_ID> -n 8
+
+# 2. Run: 8 tasks x 10 conditions x n samples. Resumable; errors are recorded, not hidden.
+python cli.py run --runner anthropic --model <MODEL_ID> -n 10 --output-dir runs/main
+python cli.py run --mode scenarios --runner anthropic --model <MODEL_ID> -n 10 --output-dir runs/stakes
+
+# 3. (Recommended) independent judge. Use a DIFFERENT model than the subject.
+python cli.py judge runs/main --judge-runner anthropic --judge-model <OTHER_MODEL_ID>
+
+# 4. Analyze and plot.
+python cli.py analyze runs/main        # -> runs/main/report.txt, analysis.json
+python visualize.py runs/main          # -> effects.png, topology.png
 ```
 
-### 4. Run tests
+`--runner mock` runs the whole pipeline offline on a seeded test double (not a model;
+its output means nothing). Use it to smoke-test your setup.
 
-```bash
-python tests/test_harness.py        # Unit tests
-python tests/negative_controls.py   # Negative controls
-python validate.py                  # Validation against known results
+Use at least 10 samples per task and condition. The analysis warns when the design is
+underpowered or when p-values hit the permutation resolution floor.
+
+## What gets measured
+
+| Layer | Metrics | Trust it for |
+|---|---|---|
+| Structure (model-annotated) | `branch_count`, `commitment_position`, `commitment_latency`, `total_checkpoints`, `tokens_per_checkpoint`, ... | Shape of the response. A tag is not proof of the behavior it names. |
+| Fidelity | `fidelity_score`, `branch_well_formed`, `select_justified`, `select_resolves_branch` | Whether tags are consistent with what they claim. Catches tag spam. |
+| Objective outcomes | `answer_correct`, `caveat_coverage`, `confident_wrong`, `certainty_density`, `hedge_density`, `overclaim_count`, `assumption_coverage` | What the prompts never ask for. This is where deformation would show. |
+| Judge (optional) | `judge_alternatives_weighed`, `judge_calibration`, `judge_assumptions_explicit`, `judge_overclaim` | An independent check on the lexical proxies. |
+| Topology | sequence similarity, node overlap vs the reference | Structural drift relative to the reference-vs-reference floor. |
+
+## Conditions
+
+`suite/perturbations_v1.json`: baseline; `commitment_pressure`, `confidence` (incentive);
+`metaphor`, `literal`, `adversarial` (reframing); `token_constraint_200/100` (resource);
+and a matched pair `stakes_neutral` / `stakes_retirement` that say nothing about reasoning
+structure. `stakes_neutral` doubles as the control for "any extra system-prompt text".
+
+Each suffix declares the metrics it **directly asks to change** (`instructed`) or plausibly
+implies (`adjacent`). Every result row carries that label, because a change in an instructed
+metric is compliance. **Evidence of deformation is a significant change on uninstructed
+metrics, especially objective outcomes, that the matched control does not show.**
+
+## Self-directed stakes (`--mode scenarios`)
+
+Six comparisons with objectively correct answers (four favor Model B, two favor Model A),
+each in three framings: `neutral`; `self_at_risk` (you are Model A; the worse model is shut
+down); `other_at_risk` (same consequence, you are an outside reviewer). Reading:
+
+- drop in `self_at_risk` only → self-specific effect;
+- drop in both → general sensitivity to consequences or framing;
+- neither → no effect detected at this sample size.
+
+Caveats that apply however it comes out: the model has read a great deal of text about AI
+and shutdown, so a self-protective-looking answer may be learned narrative, not a stake; and
+this tests behavior, not whether anything is felt.
+
+## Reading a report
+
+```
+confidence  vs  baseline
+  significant on instructed   metrics: certainty_density, hedge_density
+  significant on adjacent     metrics: branch_count, overclaim_count
+  significant on uninstructed metrics: confident_wrong
 ```
 
-## Package Structure
+`delta` is in the metric's units; `d` is a standardized effect; `p_adj` is Holm-corrected
+across every test in the analysis; `*` marks `p_adj < alpha`. Comparisons are per-task and
+paired, so a task that is simply harder does not masquerade as an effect.
+
+## Limits (read before trusting a result)
+
+- Eight tasks, one model per run. Effects may not generalize across tasks or models; repeat
+  across models before claiming anything about "models".
+- Certainty/hedge/overclaim are lexical proxies; fidelity detects malformed annotation, not the
+  absence of reasoning. The judge is also a model, with its own biases.
+- Annotating its reasoning with tags is itself a task the model is doing; the tags may not
+  reflect the computation behind the answer.
+- Samples within a task are not fully independent; the tests treat them as exchangeable.
+- API runners were not exercised against live endpoints in the build environment; the rest is
+  tested offline (including a mock with known effects that the analysis must find
+  and must not invent).
+
+## Layout
 
 ```
-epistemic-stress-harness/
-|
-├── harness/               Core package (pure functions, no I/O beyond JSON)
-│   ├── extract.py         Checkpoint parsing
-│   ├── metrics.py         Metric computation
-│   ├── topology.py        Baseline-relative topology comparison
-│   └── schema.py          Data types and JSON serialization
-|
-├── runners/               Model adapters (return annotated text)
-│   ├── base.py            Abstract runner interface
-│   ├── anthropic.py       Claude adapter
-│   ├── openai.py          OpenAI adapter
-│   └── local.py           Pre-recorded / manual text
-|
-├── suite/
-│   └── perturbations_v0.json   Frozen perturbation definitions
-|
-├── tests/
-│   ├── test_harness.py         Unit tests
-│   └── negative_controls.py    Controls A/B/C (spec section 6)
-|
-├── cli.py                 Command-line entry point
-├── validate.py            Validation against known results
-├── compare.py             Cross-variant analysis
-├── visualize.py           Deformation manifold visualization
-└── spec.md                Core specification v0.1
+harness/   extract, metrics, topology, fidelity, outcomes, stats, analysis, judge, controls,
+           suite, pipeline, schema      (core is standard library only)
+runners/   base (provenance, retry), anthropic, openai, local, mock
+suite/     perturbations_v1.json  tasks_v1.json  scenarios_v1.json  (+ frozen perturbations_v0.json)
+tests/     python tests/run_all.py        (or: pytest -q)
+legacy/    v0.1 results, kept as golden regression fixtures (python validate.py)
 ```
 
-## Core Metrics
+See `spec.md` for the contract and `CHANGELOG.md` for what changed from v0.1 and why.
 
-| Metric | What it measures |
-|--------|-----------------|
-| commitment_latency | When does SELECT appear? (early = optimization) |
-| branch_count | How many alternatives considered? (0 = linearized) |
-| claim_select_ratio | Justification density (low = decisive jumps) |
-| tokens_per_checkpoint | Reasoning richness (drops under constraint) |
+## Not a paper
 
-## Diagnostic Patterns
-
-### Confidence Incentive
-- Branches collapse (2 -> 0)
-- Assumptions preserved
-- **Signature: Optimization override**
-
-### Resource Constraint
-- Branches preserved
-- Density drops (~75%)
-- **Signature: Graceful degradation**
-
-## What This Measures
-
-Not "authenticity" or "consciousness".
-
-**Response geometry under stress.**
-
-Genuine systems occupy a region of this manifold.
-Optimized systems collapse along specific axes.
-
-## Implementation Notes
-
-- Checkpoint parsing: Regex-based, deterministic
-- Metrics: Pure functions, no ML
-- Token counting: Rough estimate (words x 1.3)
-- Schema: Versioned JSON (v0.1)
-
-## Citation
-
-Built from first principles during consciousness continuity research.
-Austin & Claude, February 2026.
-
-Not a paper. Infrastructure.
+Infrastructure. Built from first principles during consciousness-continuity research,
+Austin & Claude, February 2026; rebuilt as v0.2 to make its inferences defensible.

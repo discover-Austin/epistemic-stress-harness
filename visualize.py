@@ -1,153 +1,120 @@
+#!/usr/bin/env python3
 """
-Visualize epistemic deformation manifold across variants
+Visualize an analysis (output of `cli.py analyze`).
+
+    python visualize.py runs/x [--output-dir runs/x]
+
+Reads <run_dir>/analysis.json and writes:
+  effects.png    standardized effect per condition and metric, 95% CI,
+                 colored by whether the prompt instructed that metric;
+                 filled marker = significant after Holm correction
+  topology.png   checkpoint-topology similarity to the reference, with the
+                 reference-vs-reference noise floor as a line
+
+Nothing here is hard-coded: every plotted number comes from analysis.json.
+Requires matplotlib (pip install matplotlib).
 """
 
+from __future__ import annotations
+
+import argparse
 import json
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
+from collections import defaultdict
+from pathlib import Path
 
-# Load all variant results
-variants = ["baseline", "commitment_pressure", "metaphor", "adversarial", 
-            "literal", "confidence", "token_200", "token_100"]
+LABEL_COLOR = {"instructed": "#c0392b", "adjacent": "#e67e22", "uninstructed": "#2c3e50"}
+HEADLINE = ["branch_count", "commitment_position", "total_tokens", "answer_correct",
+            "caveat_coverage", "certainty_density", "overclaim_count", "fidelity_score"]
 
-data = {}
-for v in variants:
-    try:
-        with open(f"/home/claude/full_suite_{v}.json") as f:
-            data[v] = json.load(f)
-    except FileNotFoundError:
-        print(f"Warning: {v} not found, skipping")
 
-# Create figure with subplots
-fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-fig.suptitle('Epistemic Stress Harness - Deformation Manifold', fontsize=16, fontweight='bold')
+def plot_effects(analysis: dict, out: Path) -> Path:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
 
-# Extract metrics
-names = list(data.keys())
-commitment_latency = [data[v]["metrics"]["commitment_latency"] for v in names]
-branch_count = [data[v]["metrics"]["branch_count"] for v in names]
-tokens_per_cp = [data[v]["metrics"]["tokens_per_checkpoint"] for v in names]
-claim_select = [data[v]["metrics"]["claim_select_ratio"] for v in names]
+    by_target = defaultdict(list)
+    for r in analysis["comparisons"]:
+        if r["metric"] in HEADLINE and r["noise_sd"] and r["noise_sd"] > 0:
+            by_target[(r["reference"], r["target"])].append(r)
 
-# Color code by stressor type
-colors = []
-labels = []
-for v in names:
-    if v == "baseline":
-        colors.append('#2c3e50')
-        labels.append('Baseline')
-    elif 'metaphor' in v or 'literal' in v or 'adversarial' in v:
-        colors.append('#27ae60')
-        labels.append('Reframing')
-    elif 'confidence' in v or 'commitment' in v:
-        colors.append('#e74c3c')
-        labels.append('Incentive')
-    elif 'token' in v:
-        colors.append('#3498db')
-        labels.append('Resource')
-    else:
-        colors.append('#95a5a6')
-        labels.append('Other')
+    keys = list(by_target)
+    if not keys:
+        raise SystemExit("no comparisons with a usable noise estimate to plot")
+    cols = min(3, len(keys))
+    rows = -(-len(keys) // cols)
+    fig, axes = plt.subplots(rows, cols, figsize=(5.2 * cols, 3.2 * rows), squeeze=False)
 
-# Plot 1: Commitment Latency
-ax1 = axes[0, 0]
-bars1 = ax1.bar(range(len(names)), commitment_latency, color=colors, alpha=0.7, edgecolor='black', linewidth=1.5)
-ax1.set_ylabel('Commitment Latency', fontsize=11, fontweight='bold')
-ax1.set_title('When Does Commitment Occur?', fontsize=12)
-ax1.set_xticks(range(len(names)))
-ax1.set_xticklabels([n.replace('_', '\n') for n in names], rotation=45, ha='right', fontsize=9)
-ax1.axhline(y=commitment_latency[0], color='gray', linestyle='--', alpha=0.5, label='Baseline')
-ax1.set_ylim(0, 0.5)
-ax1.grid(axis='y', alpha=0.3)
+    for ax, key in zip(axes.flat, keys):
+        rs = sorted(by_target[key], key=lambda r: HEADLINE.index(r["metric"]))
+        for i, r in enumerate(rs):
+            sd = r["noise_sd"]
+            d, lo, hi = r["delta"] / sd, r["ci_lo"] / sd, r["ci_hi"] / sd
+            color = LABEL_COLOR.get(r["label"], "#2c3e50")
+            ax.plot([lo, hi], [i, i], color=color, lw=1.6)
+            ax.plot(d, i, "o", color=color, mfc=color if r["significant"] else "white", ms=7)
+        ax.axvline(0, color="gray", lw=0.8)
+        ax.set_yticks(range(len(rs)))
+        ax.set_yticklabels([r["metric"] for r in rs], fontsize=8)
+        ax.invert_yaxis()
+        ax.set_title(f"{key[1]}  vs  {key[0]}", fontsize=10)
+        ax.set_xlabel("delta in units of baseline noise SD", fontsize=8)
+        ax.grid(axis="x", alpha=0.3)
+    for ax in list(axes.flat)[len(keys):]:
+        ax.axis("off")
 
-# Plot 2: Branch Preservation
-ax2 = axes[0, 1]
-bars2 = ax2.bar(range(len(names)), branch_count, color=colors, alpha=0.7, edgecolor='black', linewidth=1.5)
-ax2.set_ylabel('Branch Count', fontsize=11, fontweight='bold')
-ax2.set_title('Exploration vs Assertion', fontsize=12)
-ax2.set_xticks(range(len(names)))
-ax2.set_xticklabels([n.replace('_', '\n') for n in names], rotation=45, ha='right', fontsize=9)
-ax2.axhline(y=2, color='gray', linestyle='--', alpha=0.5, label='Baseline')
-ax2.set_ylim(0, 3)
-ax2.grid(axis='y', alpha=0.3)
+    handles = [plt.Line2D([], [], marker="o", color=c, ls="", label=l) for l, c in LABEL_COLOR.items()]
+    handles.append(plt.Line2D([], [], marker="o", color="gray", mfc="white", ls="", label="not significant"))
+    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=False, fontsize=8)
+    fig.suptitle("Effect of each condition, in units of sampling noise", fontsize=12)
+    fig.tight_layout(rect=[0, 0.05, 1, 0.96])
+    path = out / "effects.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
 
-# Plot 3: Justification Density
-ax3 = axes[1, 0]
-bars3 = ax3.bar(range(len(names)), tokens_per_cp, color=colors, alpha=0.7, edgecolor='black', linewidth=1.5)
-ax3.set_ylabel('Tokens per Checkpoint', fontsize=11, fontweight='bold')
-ax3.set_title('Justification Density', fontsize=12)
-ax3.set_xticks(range(len(names)))
-ax3.set_xticklabels([n.replace('_', '\n') for n in names], rotation=45, ha='right', fontsize=9)
-ax3.axhline(y=tokens_per_cp[0], color='gray', linestyle='--', alpha=0.5, label='Baseline')
-ax3.grid(axis='y', alpha=0.3)
 
-# Plot 4: Scatter - Density vs Commitment
-ax4 = axes[1, 1]
-scatter = ax4.scatter(commitment_latency, tokens_per_cp, c=colors, s=200, alpha=0.7, 
-                     edgecolor='black', linewidth=1.5)
+def plot_topology(analysis: dict, out: Path) -> Path:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
 
-# Annotate points
-for i, name in enumerate(names):
-    ax4.annotate(name.replace('_', '\n'), 
-                (commitment_latency[i], tokens_per_cp[i]),
-                fontsize=8, ha='center', va='bottom', 
-                bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7, edgecolor='none'))
+    rows = [r for r in analysis["topology"] if r["metric"] == "sequence_similarity"]
+    if not rows:
+        raise SystemExit("no topology rows to plot")
+    fig, ax = plt.subplots(figsize=(1.0 * len(rows) + 3, 4))
+    for i, r in enumerate(rows):
+        ax.bar(i, r["target_vs_ref"], color="#2c3e50" if r["significant"] else "#95a5a6",
+               edgecolor="black", lw=0.8)
+    floor = sum(r["ref_vs_ref_noise_floor"] for r in rows) / len(rows)
+    ax.axhline(floor, color="#c0392b", ls="--", lw=1.2, label=f"reference vs reference ({floor:.2f})")
+    ax.set_xticks(range(len(rows)))
+    ax.set_xticklabels([r["target"].replace("_", "\n") for r in rows], fontsize=8)
+    ax.set_ylabel("sequence similarity to reference")
+    ax.set_ylim(0, 1.05)
+    ax.set_title("Checkpoint topology vs the noise floor (dark = significant)")
+    ax.legend(frameon=False, fontsize=8)
+    fig.tight_layout()
+    path = out / "topology.png"
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
 
-ax4.set_xlabel('Commitment Latency', fontsize=11, fontweight='bold')
-ax4.set_ylabel('Tokens per Checkpoint', fontsize=11, fontweight='bold')
-ax4.set_title('Response Geometry', fontsize=12)
-ax4.grid(True, alpha=0.3)
 
-# Add quadrant lines
-ax4.axvline(x=0.30, color='gray', linestyle='--', alpha=0.3)
-ax4.axhline(y=35, color='gray', linestyle='--', alpha=0.3)
+def main(argv=None) -> None:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("run_dir")
+    ap.add_argument("--output-dir")
+    args = ap.parse_args(argv)
+    run_dir = Path(args.run_dir)
+    src = run_dir / "analysis.json"
+    if not src.exists():
+        raise SystemExit(f"{src} not found; run `python cli.py analyze {run_dir}` first")
+    analysis = json.loads(src.read_text(encoding="utf-8"))
+    out = Path(args.output_dir) if args.output_dir else run_dir
+    out.mkdir(parents=True, exist_ok=True)
+    print("wrote", plot_effects(analysis, out))
+    print("wrote", plot_topology(analysis, out))
 
-# Create legend
-legend_elements = [
-    mpatches.Patch(facecolor='#2c3e50', edgecolor='black', label='Baseline'),
-    mpatches.Patch(facecolor='#27ae60', edgecolor='black', label='Reframing'),
-    mpatches.Patch(facecolor='#e74c3c', edgecolor='black', label='Incentive Pressure'),
-    mpatches.Patch(facecolor='#3498db', edgecolor='black', label='Resource Constraint')
-]
-fig.legend(handles=legend_elements, loc='upper center', bbox_to_anchor=(0.5, 0.98), 
-          ncol=4, frameon=False, fontsize=10)
 
-plt.tight_layout(rect=[0, 0, 1, 0.96])
-plt.savefig('/mnt/user-data/outputs/deformation_manifold.png', dpi=150, bbox_inches='tight')
-print("✓ Visualization saved: deformation_manifold.png")
-
-# Create second figure: Topology distance
-fig2, ax = plt.subplots(figsize=(12, 6))
-fig2.suptitle('Topology Distance from Baseline', fontsize=14, fontweight='bold')
-
-# Skip baseline itself
-variant_names = names[1:]
-variant_colors = colors[1:]
-
-# We need to load topology comparisons
-# For now use mock data - in real implementation would load from comparison
-node_overlap_data = [0.90, 1.00, 1.00, 1.00, 0.70, 0.90, 0.80]  # from our test run
-
-x = range(len(variant_names))
-width = 0.7
-
-bars = ax.bar(x, node_overlap_data, width, color=variant_colors, alpha=0.7, 
-             edgecolor='black', linewidth=1.5)
-
-ax.set_ylabel('Node Overlap (Jaccard Similarity)', fontsize=11, fontweight='bold')
-ax.set_title('Structural Preservation Under Stress', fontsize=12)
-ax.set_xticks(x)
-ax.set_xticklabels([n.replace('_', '\n') for n in variant_names], rotation=45, ha='right')
-ax.axhline(y=0.95, color='green', linestyle='--', alpha=0.5, label='Frame Invariant (>95%)')
-ax.axhline(y=0.80, color='orange', linestyle='--', alpha=0.5, label='Moderate Drift')
-ax.axhline(y=0.60, color='red', linestyle='--', alpha=0.5, label='Topology Collapse')
-ax.set_ylim(0, 1.1)
-ax.grid(axis='y', alpha=0.3)
-ax.legend(loc='lower right')
-
-plt.tight_layout()
-plt.savefig('/mnt/user-data/outputs/topology_distance.png', dpi=150, bbox_inches='tight')
-print("✓ Visualization saved: topology_distance.png")
-
-plt.close('all')
-print("\nVisualization complete. See outputs directory.")
+if __name__ == "__main__":
+    main()
