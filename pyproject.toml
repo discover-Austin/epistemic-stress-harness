@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "epistemic-stress-harness"
+version = "0.2.0"
+description = "Measure how a model's reasoning structure and outputs change under pressure, against a measured noise floor."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = []          # core is standard library only
+
+[project.optional-dependencies]
+fast = ["numpy"]                   # 50x faster permutation tests / bootstraps
+viz = ["matplotlib"]
+anthropic = ["anthropic"]
+openai = ["openai"]
+dev = ["pytest", "numpy", "matplotlib"]
+
+[project.scripts]
+esh = "cli:main"
+
+[tool.setuptools]
+packages = ["harness", "runners"]
+py-modules = ["cli", "visualize", "validate", "compare", "epistemic_harness"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

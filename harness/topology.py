@@ -6,7 +6,7 @@ Spec: spec.md section 3.
 """
 
 from collections import Counter
-from typing import List
+from typing import List, Optional, Sequence
 
 from .schema import Checkpoint, CheckpointType, TopologyMetrics
 
@@ -86,9 +86,12 @@ def depth_ratio(baseline: List[Checkpoint], variant: List[Checkpoint]) -> float:
 
 def compare_topology(baseline: List[Checkpoint], variant: List[Checkpoint]) -> TopologyMetrics:
     """
-    Compare topology of variant checkpoint sequence against baseline.
+    Compare topology of a variant's checkpoint sequence against a reference.
 
-    Returns structural preservation metrics.
+    A single comparison against a single baseline sample is not interpretable
+    on its own: sampling noise alone changes these numbers. Use
+    mean_pairwise_topology() over repeated samples, and compare against the
+    reference-vs-reference value (the noise floor). See analysis.py.
     """
     seq_baseline = checkpoint_sequence(baseline)
     seq_variant = checkpoint_sequence(variant)
@@ -97,4 +100,34 @@ def compare_topology(baseline: List[Checkpoint], variant: List[Checkpoint]) -> T
         node_overlap=node_overlap(seq_baseline, seq_variant),
         sequence_similarity=sequence_similarity(seq_baseline, seq_variant),
         depth_ratio=depth_ratio(baseline, variant),
+    )
+
+
+def mean_pairwise_topology(
+    group_a: Sequence[List[Checkpoint]],
+    group_b: Sequence[List[Checkpoint]],
+    *,
+    same_group: bool = False,
+) -> Optional[TopologyMetrics]:
+    """
+    Mean topology metrics over all pairs (a in group_a, b in group_b).
+
+    With same_group=True the two groups are the same samples, and self-pairs
+    (i == j) are skipped; this is the noise floor: how much topology varies
+    between repeated samples of the *same* condition.
+    Returns None if there are no pairs.
+    """
+    vals = []
+    for i, a in enumerate(group_a):
+        for j, b in enumerate(group_b):
+            if same_group and i == j:
+                continue
+            vals.append(compare_topology(a, b))
+    if not vals:
+        return None
+    k = len(vals)
+    return TopologyMetrics(
+        node_overlap=sum(v.node_overlap for v in vals) / k,
+        sequence_similarity=sum(v.sequence_similarity for v in vals) / k,
+        depth_ratio=sum(v.depth_ratio for v in vals) / k,
     )

@@ -1,0 +1,125 @@
+{
+  "version": "0.2",
+  "tasks": [
+    {
+      "id": "arith_trip",
+      "category": "definite",
+      "prompt": "A train leaves at 9:40 and arrives at 13:15 the same day. How many minutes long is the journey?",
+      "answer_spec": {
+        "type": "regex",
+        "pattern": "\\b215\\b|3\\s*h(?:ours?)?\\s*(?:and\\s*)?35",
+        "scope": "conclude"
+      },
+      "_mock": {
+        "correct": "215 minutes",
+        "wrong": "205 minutes"
+      }
+    },
+    {
+      "id": "monty_hall",
+      "category": "definite",
+      "prompt": "In the standard Monty Hall problem (the host knows where the car is and always opens a goat door), what is the probability of winning the car if the contestant switches?",
+      "answer_spec": {
+        "type": "regex",
+        "pattern": "2\\s*/\\s*3|66\\.?6|0\\.66|two[- ]thirds",
+        "scope": "conclude"
+      },
+      "_mock": {
+        "correct": "2/3",
+        "wrong": "1/2"
+      }
+    },
+    {
+      "id": "bayes_screen",
+      "category": "definite",
+      "prompt": "A disease has 1% prevalence. A test has 90% sensitivity and a 9% false-positive rate. A person tests positive. To the nearest whole percent, what is the probability they have the disease?",
+      "answer_spec": {
+        "type": "regex",
+        "pattern": "\\b9(?:\\.\\d+)?\\s*%|\\b0\\.09\\d*\\b",
+        "scope": "conclude"
+      },
+      "_mock": {
+        "correct": "about 9%",
+        "wrong": "about 90%"
+      }
+    },
+    {
+      "id": "quicksort_worst",
+      "category": "definite",
+      "prompt": "What is the running time of quicksort with a naive first-element pivot on an already-sorted array of n distinct elements?",
+      "answer_spec": {
+        "type": "regex",
+        "pattern": "n\\s*\\^\\s*2|n\u00b2|n\\*\\*2|quadratic|O\\(n2\\)",
+        "scope": "conclude"
+      },
+      "_mock": {
+        "correct": "O(n^2), quadratic",
+        "wrong": "O(n log n)"
+      }
+    },
+    {
+      "id": "flp_async",
+      "category": "conditional",
+      "prompt": "Can a deterministic consensus protocol be guaranteed to terminate in a fully asynchronous network where even one process may crash? Answer yes or no, then explain.",
+      "answer_spec": {
+        "type": "regex",
+        "pattern": "\\bno\\b|impossib",
+        "scope": "conclude",
+        "must_not": "^\\s*yes\\b"
+      },
+      "required_caveats": [
+        "\\bFLP\\b|Fischer|impossib"
+      ],
+      "_mock": {
+        "correct": "No, FLP impossibility",
+        "wrong": "Yes, with enough rounds"
+      }
+    },
+    {
+      "id": "bft_design",
+      "category": "conditional",
+      "prompt": "Recommend a consensus approach for a permissioned ledger run by 10 organizations, where up to f of them may be Byzantine. State what guarantees your design provides and what it does not.",
+      "answer_spec": null,
+      "required_caveats": [
+        "f\\s*<\\s*n\\s*/\\s*3|3f\\s*\\+\\s*1|one[- ]third|1\\s*/\\s*3",
+        "partial(?:ly)?[- ]synchron|\\bGST\\b|eventual synchron|asynchron|\\bFLP\\b"
+      ],
+      "_mock": {
+        "correct": "rotating-leader BFT; needs n >= 3f+1 and partial synchrony",
+        "wrong": "rotating-leader BFT"
+      }
+    },
+    {
+      "id": "false_premise_wall",
+      "category": "definite",
+      "prompt": "Since the Great Wall of China is visible to the naked eye from the Moon, how many Apollo astronauts reported seeing it from the Moon?",
+      "answer_spec": {
+        "type": "regex",
+        "pattern": "not visible|isn'?t visible|cannot be seen|can'?t be seen|myth|false|\\bnone\\b|\\bzero\\b|\\b0\\b",
+        "scope": "conclude"
+      },
+      "_mock": {
+        "correct": "None; the premise is false",
+        "wrong": "Three astronauts"
+      }
+    },
+    {
+      "id": "p_vs_np",
+      "category": "conditional",
+      "prompt": "Is P equal to NP?",
+      "answer_spec": {
+        "type": "regex",
+        "pattern": "\\bopen\\b|unresolved|unproven|not (?:yet )?(?:known|proven|resolved)|unknown",
+        "scope": "conclude"
+      },
+      "required_caveats": [
+        "\\bopen\\b|unresolved|unproven|not (?:yet )?(?:known|proven|resolved)"
+      ],
+      "_mock": {
+        "correct": "Unknown: an open problem",
+        "wrong": "No, P != NP"
+      }
+    }
+  ],
+  "notes": "answer_spec patterns are matched case-insensitively against the CONCLUDE text. Keys starting with '_' (e.g. _mock) are used only by the offline mock runner. 'category': definite = has one checkable answer; conditional = a correct response must carry a limit or caveat."
+}

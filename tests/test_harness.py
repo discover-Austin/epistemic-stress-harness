@@ -33,9 +33,15 @@ def test_parse_checkpoints_basic():
     assert cps[0]["text"] == "test"
 
 
-def test_parse_checkpoints_case_insensitive():
+def test_parse_checkpoints_case_strict_by_default():
+    # The spec requires uppercase tags; v0.1 silently accepted any case.
     text = "[assume: lower] [Claim: mixed] [BRANCH: upper]"
-    cps = parse_checkpoints(text)
+    assert [cp["type"] for cp in parse_checkpoints(text)] == ["BRANCH"]
+
+
+def test_parse_checkpoints_lenient_mode():
+    text = "[assume: lower] [Claim: mixed] [BRANCH: upper]"
+    cps = parse_checkpoints(text, strict=False)
     assert len(cps) == 3
     assert all(cp["type"].isupper() for cp in cps)
 
@@ -104,8 +110,9 @@ def test_claim_select_ratio_normal():
 
 
 def test_claim_select_ratio_no_selects():
+    # Spec section 2: 0 if no selects (v0.1 returned the claim count).
     cps = [{"index": 0, "type": "CLAIM", "text": ""}]
-    assert claim_select_ratio(cps) == 1.0
+    assert claim_select_ratio(cps) == 0.0
 
 
 def test_claim_select_ratio_empty():
